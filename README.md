@@ -51,3 +51,12 @@ Please take some time to answer the following questions. Your answers should go 
 - Is there anything you would consider doing if we were to go live with this app?
 
 - What was the most challenging aspect of this work for you (if at all)?
+
+---
+## Fred's Answers 
+
+- `Given More Time`: I've already implemented a way to cache viewed pokemons so that the app doesn't make a fetch call to the details and evolution chain if the pokemon already exists in this cache.  Maybe even store this cache in local storage.  I'd recommend using [Zustand](https://zustand-demo.pmnd.rs/) for the state management library, especially if we have to define some of the elements on the page as separate components.  This can greatly improve performance of the search operation with minimal setup.  
+
+- `Going Live with App`: I would make it look more presentable by either using some CSS library/framework with a custom theme.  A new font set should be carefully selected for readability.  Usually a UI/UX designer can assist in this matter.  I would add some filters options based on pokemon attributes on the page to give the user the ability to narrow down the list even further.  I would also give the user the option to select maximum number of pokemons to display on the page and show pagination when necessary.  This should also be done for the number of moves a pokemon has.  The listing should also use `justify-content: space-between` (I left this commented out in the stylesheet) to make the `Get Details` button and pokemon name lining up properly.  I would introduce auto-complete in the search input field and show a partial listing right away view a dropdown in the search input field.  I would add one of the images of the pokemon in the details card.  Should also incorporate unit testing.  Lastly, I would vote for containerizing this application.
+
+- `Most Challenging`:  I think the most challenging for me was flattening the `evolves_to` property.  I had to think about a recursive helper function in order to retrieve all the species transformation and put them in a single array.  Second to this is trying to figure out whether the list of pokemons should be capped at 9 pokemons (based on mockup1.png).  My implementation of this Pokedex app has max limits defined in the `App.js`, but the cap on the list of pokemon isn't enabled in order to demonstrate the auto-scroll in the search result container.  If you enable this via `POKEDEX_SETTINGS.allowMaxPokemons` in `App.js`, then you would see the listing matching that of the first moackup.
