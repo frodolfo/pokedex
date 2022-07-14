@@ -1,5 +1,12 @@
-import { memo, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as API from './api';
+
+const POKEDEX_SETTINGS = {
+  allowMaxMoves: true,
+  allowMaxPokemons: false,
+  maxPokemons: 9,
+  maxMoves: 4,
+};
 
 function App() {
   const [pokemonIndex, setPokemonIndex] = useState([]);
@@ -7,14 +14,17 @@ function App() {
   const [searchValue, setSearchValue] = useState('');
   const [pokemonDetails, setPokemonDetails] = useState();
   const [pokemonEvolutions, setPokemonEvolutions] = useState();
-  const [viewPokemon, setViewPokemon] = useState();
   const [viewedPokemons, setViewedPokemons] = useState();
 
   const fetchPokemon = async () => {
     const { results: pokemonList } = await API.fetchAllPokemon();
+    const partialPokemonList = POKEDEX_SETTINGS.allowMaxPokemons
+      ? pokemonList.length > 0 &&
+        pokemonList.slice(0, POKEDEX_SETTINGS.maxPokemons)
+      : pokemonList.length > 0 && pokemonList;
 
-    setPokemon(pokemonList);
-    setPokemonIndex(pokemonList);
+    setPokemon(partialPokemonList);
+    setPokemonIndex(partialPokemonList);
   };
 
   useEffect(() => {
@@ -40,19 +50,14 @@ function App() {
   };
 
   const onGetDetails = (name) => async () => {
-    let selectedPokemonDetails, selectedPokemonEvo;
+    let selectedPokemonDetails, selectedPokemonEvolutions, viewedPokemon;
+    let viewedPokemonsCache = viewedPokemons;
     let evolutionSpecies = [];
-    let cachedPokemons = {};
 
     if (!name) {
       console.error('name not provided');
       return;
     }
-
-    setViewPokemon(name);
-
-    // TODO: delete this
-    // console.clear();
 
     const flattenEvolution = (evolvesTo) => {
       let evolutions = [];
@@ -71,48 +76,44 @@ function App() {
       return evolutions;
     };
 
-    selectedPokemonDetails = await API.fetchPokemonDetailsByName(name);
+    viewedPokemon = viewedPokemons && viewedPokemons[name];
 
-    if (selectedPokemonDetails) {
-      selectedPokemonEvo = await API.fetchEvolutionChainById(
-        selectedPokemonDetails.id
-      );
-    }
-
-    if (selectedPokemonEvo) {
-      evolutionSpecies.push(selectedPokemonEvo.chain.species.name);
-      evolutionSpecies = evolutionSpecies.concat(
-        flattenEvolution(selectedPokemonEvo.chain.evolves_to)
-      );
-    }
-
-    if (!viewedPokemons) {
-      cachedPokemons[name] = {
-        name,
-        details: selectedPokemonDetails,
-        evolutions: evolutionSpecies,
-      };
+    if (viewedPokemon) {
+      selectedPokemonDetails = viewedPokemon.details;
+      selectedPokemonEvolutions = viewedPokemon.evolutions;
     } else {
-      cachedPokemons = viewedPokemons;
-      cachedPokemons[name] = {
-        name,
-        details: selectedPokemonDetails,
-        evolutions: evolutionSpecies,
-      };
+      selectedPokemonDetails = await API.fetchPokemonDetailsByName(name);
+
+      if (selectedPokemonDetails) {
+        selectedPokemonEvolutions = await API.fetchEvolutionChainById(
+          selectedPokemonDetails.id
+        );
+
+        if (!viewedPokemonsCache) {
+          viewedPokemonsCache = {};
+        }
+
+        viewedPokemonsCache[name] = {
+          details: selectedPokemonDetails,
+          evolutions: selectedPokemonEvolutions,
+        };
+
+        setViewedPokemons(viewedPokemonsCache);
+      }
     }
 
-    setViewedPokemons(cachedPokemons);
+    if (selectedPokemonEvolutions) {
+      evolutionSpecies.push(selectedPokemonEvolutions.chain.species.name);
+      evolutionSpecies = evolutionSpecies.concat(
+        flattenEvolution(selectedPokemonEvolutions.chain.evolves_to)
+      );
+    }
+
     setPokemonDetails(selectedPokemonDetails);
     setPokemonEvolutions(evolutionSpecies);
-
-    // TODO: delete this
-    console.log('selectedPokemonDetails: ', selectedPokemonDetails);
-    console.log('selectedPokemonEvo: ', selectedPokemonEvo);
-    console.log('evolutionSpecies: ', evolutionSpecies);
-    console.log('viewedPokemons: ', viewedPokemons);
   };
 
-  const pokemonList = () => {
+  const renderPokemonList = () => {
     if (!pokemon || !Array.isArray(pokemon)) {
       return;
     }
@@ -141,33 +142,15 @@ function App() {
     if (!pokemonDetails || !pokemonEvolutions) {
       return;
     }
-    // if (!viewedPokemons) {
-    //   return;
-    // }
-
-    // console.log('viewedPokemons: ', viewedPokemons);
-    // console.log('viewPokemon: ', viewPokemon);
-    // console.log(
-    //   'viewedPokemons[viewPokemon]?.details: ',
-    //   viewedPokemons[viewPokemon]?.details
-    // );
-    // console.log(
-    //   'viewedPokemons[viewPokemon].evolutions: ',
-    //   viewedPokemons[viewPokemon].evolutions
-    // );
 
     const { types, moves } = pokemonDetails;
     const evolutions = pokemonEvolutions;
-    // const { types, moves } = viewedPokemons[viewPokemon]?.details;
-    // const evolutions = viewedPokemons[viewPokemon].evolutions;
-
-    const partialMoves = moves.length > 0 && moves.slice(0, 4);
+    const partialMoves =
+      moves.length > 0 &&
+      POKEDEX_SETTINGS.allowMaxMoves &&
+      moves.slice(0, POKEDEX_SETTINGS.maxMoves);
 
     return (
-      //   <div className={pokemonDetails ? 'pokedex__details' : 'hidden'}>
-      //     <div className={'pokemon__details-title bold'}>
-      //       {viewedPokemons[viewPokemon]?.name}
-      //     </div>
       <div className={pokemonDetails ? 'pokedex__details' : 'hidden'}>
         <div className={'pokemon__details-title bold'}>
           {pokemonDetails?.name}
@@ -210,16 +193,16 @@ function App() {
       <div className={'pokedex__search-input'}>
         <input
           value={searchValue}
-          onInput={onSearchValueChange}
+          onChange={onSearchValueChange}
           placeholder={'Search Pokemon'}
         />
       </div>
       <div className={'pokedex__content'}>
-        {pokemonList()}
+        {renderPokemonList()}
         {renderPokemonDetails()}
       </div>
     </div>
   );
 }
 
-export default memo(App);
+export default App;
