@@ -3,7 +3,7 @@ import * as API from './api';
 
 const POKEDEX_SETTINGS = {
   allowMaxMoves: true,
-  allowMaxPokemons: false,
+  allowMaxPokemons: true,
   maxPokemons: 9,
   maxMoves: 4,
 };
@@ -156,7 +156,7 @@ function App() {
           {pokemonDetails?.name}
         </div>
         <div className={'pokemon__details-header'}>
-          <div className={'bold'}>Types</div>
+          <div className={'pokemon__details-header-type bold'}>Types</div>
           <div className={'bold'}>Moves</div>
         </div>
         <div className={'pokemon__details-items'}>
